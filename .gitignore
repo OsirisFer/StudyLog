@@ -1,0 +1,30 @@
+# Backend
+backend/.venv/
+backend/__pycache__/
+backend/*.db
+backend/app/__pycache__/
+backend/.pytest_cache/
+backend/.coverage
+backend/*.pyc
+backend/*.pyo
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Environments / Secrets
+.env
+.env.*
+*.local
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.log
