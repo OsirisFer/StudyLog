@@ -1,8 +1,9 @@
-'use client'
+"use client"
 
-import { useEffect, useMemo, useState } from 'react'
-import { getKnowledge, type KnowledgeItem } from '@/lib/api'
-import { MathText } from '@/components/MathText'
+import { useEffect, useMemo, useState } from "react"
+import { Trash2 } from "lucide-react"
+import { deleteKnowledgeItem, getKnowledge, type KnowledgeItem } from "@/lib/api"
+import { MathText } from "@/components/MathText"
 
 const PAGE_SIZE = 200 // Fetch a large amount of items so it's a continuous document (backend max is 200)
 const DEBOUNCE_MS = 350
@@ -143,6 +144,38 @@ export default function FactsPage() {
         return lines.join('\n')
     }, [items])
 
+    // Group items by date for rendering with per-line delete buttons
+    const groupedByDate = useMemo(() => {
+        const byDate: Record<
+            string,
+            {
+                id: number
+                text: string
+            }[]
+        > = {}
+        for (const item of items) {
+            const date = item.source_date
+            if (!byDate[date]) byDate[date] = []
+            byDate[date].push({ id: item.id, text: item.correct_option })
+        }
+        const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a))
+        return dates.map((date) => ({
+            date,
+            facts: byDate[date],
+        }))
+    }, [items])
+
+    const handleDeleteFact = async (id: number) => {
+        if (!confirm("Delete this fact?")) return
+        try {
+            await deleteKnowledgeItem(id)
+            setItems((prev) => prev.filter((item) => item.id !== id))
+        } catch (e) {
+            console.error(e)
+            setError("Failed to delete fact")
+        }
+    }
+
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(fullTextContent)
@@ -239,8 +272,30 @@ export default function FactsPage() {
                     {items.length === 0 && !loading && !error ? (
                         <p className="text-[var(--muted)] text-center mt-4">No facts found.</p>
                     ) : (
-                        <div className="whitespace-pre-wrap font-mono text-sm text-[var(--text)] leading-relaxed">
-                            <MathText content={fullTextContent} />
+                        <div className="font-mono text-sm text-[var(--text)] leading-relaxed space-y-4">
+                            {groupedByDate.map((group) => (
+                                <div key={group.date} className="space-y-1">
+                                    <div className="text-[var(--muted)]">{group.date}</div>
+                                    {group.facts.map((fact) => (
+                                        <div
+                                            key={fact.id}
+                                            className="group flex items-start gap-2 whitespace-pre-wrap"
+                                        >
+                                            <div className="flex-1">
+                                                <MathText content={fact.text} />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                title="Delete fact"
+                                                onClick={() => handleDeleteFact(fact.id)}
+                                                className="mt-0.5 p-1 text-[var(--muted)] hover:text-[var(--wrong)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
                             {loading && <div className="mt-4 text-[var(--muted)] italic">Loading facts…</div>}
                         </div>
                     )}

@@ -189,3 +189,8 @@ export async function getKnowledge(params: KnowledgeQuery = {}): Promise<Knowled
   if (!r.ok) throw new Error('Failed to fetch knowledge')
   return r.json()
 }
+
+export async function deleteKnowledgeItem(id: number): Promise<void> {
+  const r = await fetch(`${API}/facts/${id}`, { method: 'DELETE' })
+  if (!r.ok) throw new Error('Failed to delete fact')
+}

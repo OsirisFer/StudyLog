@@ -413,3 +413,13 @@ def get_knowledge(
             )
         )
     return items
+
+
+@app.delete("/facts/{question_id}")
+def delete_fact_item(question_id: int, db: Session = Depends(get_db)):
+    row = db.query(Question).filter(Question.id == question_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Fact not found")
+    db.delete(row)
+    db.commit()
+    return {"status": "deleted", "id": question_id}
