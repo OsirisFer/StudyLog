@@ -60,6 +60,19 @@ def _answer_derived_from_content(correct_answer: str, content: str) -> bool:
 
 
 def _build_prompt(content: str) -> str:
+    # Rough heuristic: treat each non-empty line as a distinct fact and ask
+    # the model to produce exactly that many items. This helps simple
+    # "one fact per line" notes yield one question per line.
+    lines = [ln for ln in content.splitlines() if ln.strip()]
+    line_count = len(lines)
+    per_line_rule = ""
+    if line_count > 0:
+        per_line_rule = (
+            f"\n- The user's notes contain exactly {line_count} non-empty lines. "
+            f"Treat EACH non-empty line as one distinct fact and produce EXACTLY {line_count} items "
+            f"in the 'facts' array, one per line, in the same order."
+        )
+
     return f"""You are a quiz generator. Given the following study notes, extract knowledge facts and for EACH fact produce exactly one multiple-choice item.
 
 RULES:
@@ -68,7 +81,7 @@ RULES:
 - "distractors" must be exactly 3 plausible wrong answers (array of 3 strings).
 - "explanation" is a short explanation (optional but recommended).
 - ALL mathematical formulas, variables, and expressions MUST be wrapped in LaTeX inline delimiters \( and \) (e.g., \(x^2\), \(\frac{{1}}{{x}}\)).
-- Use the SAME LANGUAGE as the user's study notes. If the notes are in Spanish, write questions, answers, and explanations in Spanish. Do NOT translate the content to another language.
+- Use the SAME LANGUAGE as the user's study notes. If the notes are in Spanish, write questions, answers, and explanations in Spanish. Do NOT translate the content to another language.{per_line_rule}
 
 Return ONLY valid JSON, no markdown, no extra text. Schema:
 {{"facts": [{{"question": "...", "correct_answer": "...", "distractors": ["...", "...", "..."], "explanation": "..."}}]}}
@@ -113,9 +126,18 @@ def _parse_facts_response(response_text: str) -> list[dict] | None:
         text = "\n".join(lines)
     try:
         data = json.loads(text)
-        facts = data.get("facts")
-        if isinstance(facts, list):
-            return facts
+        # Case 1: top-level array
+        if isinstance(data, list):
+            return data
+        # Case 2: object with "facts" key
+        if isinstance(data, dict):
+            facts = data.get("facts")
+            if isinstance(facts, list):
+                return facts
+            # Case 3: fallback – first list value in the object
+            for v in data.values():
+                if isinstance(v, list):
+                    return v
     except json.JSONDecodeError:
         pass
     return None
@@ -130,7 +152,16 @@ def generate_quiz_facts(content: str, model: str = DEFAULT_MODEL) -> list[dict]:
         return []
 
     prompt = _build_prompt(content)
-    response_text = _call_ollama(prompt, model=model)
+    # System prompt reinforces language preservation (no traducciones).
+    response_text = _call_ollama(
+        prompt,
+        system=(
+            "You MUST respond in the same language as the user's study notes. "
+            "If the notes are in Spanish, respond entirely in Spanish. "
+            "Never translate the content to another language."
+        ),
+        model=model,
+    )
     facts = _parse_facts_response(response_text)
 
     if facts is None:
