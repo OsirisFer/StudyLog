@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { MathText } from '@/components/MathText'
 import { createTestRecord, getDailyQuiz, submitAttempt, type QuestionWithOptions } from '@/lib/api'
 
 type Props = { date: string; n: number }
@@ -164,7 +165,7 @@ export function DailyQuizRunner({ date, n }: Props) {
       </div>
 
       <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-6">
-        <p className="font-medium text-[var(--text)] mb-4">{current.question_text}</p>
+        <div className="font-medium text-[var(--text)] mb-4"><MathText content={current.question_text} /></div>
         <ul className="space-y-2">
           {current.options.map((opt) => {
             const isSelected = answered?.selectedOption === opt
@@ -183,7 +184,7 @@ export function DailyQuizRunner({ date, n }: Props) {
                   disabled={!!answered}
                   className={`w-full text-left rounded-md border px-4 py-3 transition-colors disabled:cursor-default ${style}`}
                 >
-                  {opt}
+                  <MathText content={opt} />
                 </button>
               </li>
             )
@@ -191,11 +192,11 @@ export function DailyQuizRunner({ date, n }: Props) {
         </ul>
         {answered && (
           <div className="mt-4 pt-4 border-t border-[var(--border)]">
-            <p className={`text-sm font-medium ${answered.wasCorrect ? 'text-[var(--correct)]' : 'text-[var(--wrong)]'}`}>
-              {answered.wasCorrect ? 'Correct.' : `Correct answer: ${answered.correctAnswer}`}
-            </p>
+            <div className={`text-sm font-medium ${answered.wasCorrect ? 'text-[var(--correct)]' : 'text-[var(--wrong)]'}`}>
+              {answered.wasCorrect ? 'Correct.' : <><span className="mr-1">Correct answer:</span> <MathText content={answered.correctAnswer} /></>}
+            </div>
             {answered.explanation && (
-              <p className="text-sm text-[var(--muted)] mt-2">{answered.explanation}</p>
+              <div className="text-sm text-[var(--muted)] mt-2"><MathText content={answered.explanation} /></div>
             )}
             <button
               type="button"

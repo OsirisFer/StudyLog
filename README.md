@@ -40,4 +40,4 @@ A fullstack app for studying from daily notes: write notes, get AI-generated qui
 - AI-generated daily quizzes and weekly tests
 - Smart repetition weighting based on mistakes and streaks
 - Test History with past quiz sessions
-- Knowledge Base page that lists all accumulated questions across all dates
+- Facts Notes page that shows all accumulated facts as continuous text

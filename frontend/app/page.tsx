@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getDailyPages } from '@/lib/api'
 import { CalendarLink } from '@/components/CalendarLink'
+import { DeleteDailyPageButton } from '@/components/DeleteDailyPageButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,14 +30,17 @@ export default async function DashboardPage() {
             <li className="text-[var(--muted)] py-4">No pages yet. Pick a date above to start.</li>
           ) : (
             sorted.slice(0, 14).map((p) => (
-              <li key={p.date}>
+              <li key={p.date} className="group relative">
                 <Link
                   href={`/daily/${p.date}`}
-                  className="block py-2 px-3 rounded-md hover:bg-[var(--border)]/50 text-[var(--text)]"
+                  className="block py-2 px-3 rounded-md hover:bg-[var(--border)]/50 text-[var(--text)] pr-10"
                 >
                   <span className="font-medium">{p.date}</span>
                   {p.title && <span className="text-[var(--muted)] ml-2">— {p.title}</span>}
                 </Link>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <DeleteDailyPageButton date={p.date} />
+                </div>
               </li>
             ))
           )}

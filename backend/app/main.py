@@ -113,6 +113,16 @@ def update_daily_page(date: str, body: DailyPageUpdate, db: Session = Depends(ge
     return page_to_response(page)
 
 
+@app.delete("/daily-pages/{date}")
+def delete_daily_page(date: str, db: Session = Depends(get_db)):
+    page = db.query(DailyPage).filter(DailyPage.date == date).first()
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+    db.delete(page)
+    db.commit()
+    return {"status": "deleted", "date": date}
+
+
 @app.post("/daily-pages/{date}/generate-quiz", response_model=list[QuestionResponse])
 def generate_quiz(date: str, db: Session = Depends(get_db)):
     page = db.query(DailyPage).filter(DailyPage.date == date).first()
@@ -341,8 +351,8 @@ def delete_test(test_id: int, db: Session = Depends(get_db)):
     return {"status": "deleted", "id": test_id}
 
 
-# ----- Knowledge base -----
-@app.get("/knowledge", response_model=list[KnowledgeItemResponse])
+# ----- Facts / knowledge base -----
+@app.get("/facts", response_model=list[KnowledgeItemResponse])
 def get_knowledge(
     q: str | None = Query(None, description="Full-text search over question and answer"),
     tag: str | None = Query(None, description="Tag filter (reserved, currently unused)"),

@@ -29,7 +29,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - `/quiz/daily` — Daily quiz (optional `?date=YYYY-MM-DD&n=10`)
 - `/quiz/weekly` — Weekly test (current week, 20 questions)
 - `/tests` — Test History (past quiz sessions)
-- `/knowledge` — Knowledge Base (all accumulated questions)
+- `/facts` — Facts Notes (continuous text facts across all dates)
 
 ## Build
 

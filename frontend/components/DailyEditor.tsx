@@ -19,6 +19,51 @@ export function DailyEditor({ date, initialPage }: Props) {
   const [genCount, setGenCount] = useState<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMounted = useRef(true)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const insertSnippet = (snippet: string, cursorOffset: number = snippet.length) => {
+    if (!textareaRef.current) return
+    const el = textareaRef.current
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const newContent = content.substring(0, start) + snippet + content.substring(end)
+    setContent(newContent)
+
+    setTimeout(() => {
+      el.focus()
+      el.setSelectionRange(start + cursorOffset, start + cursorOffset)
+    }, 0)
+  }
+
+  const MATH_SYMBOLS = [
+    { label: '∫', snippet: '∫' },
+    { label: '√', snippet: '√' },
+    { label: 'π', snippet: 'π' },
+    { label: 'θ', snippet: 'θ' },
+    { label: 'α', snippet: 'α' },
+    { label: 'β', snippet: 'β' },
+    { label: '≤', snippet: '≤' },
+    { label: '≥', snippet: '≥' },
+    { label: '≠', snippet: '≠' },
+    { label: '→', snippet: '→' },
+    { label: '∞', snippet: '∞' },
+    { label: 'Σ', snippet: 'Σ' },
+    { label: 'lim', snippet: 'lim ' },
+    { label: 'log', snippet: 'log ' },
+    { label: 'ln', snippet: 'ln ' },
+    { label: 'sin', snippet: 'sin ' },
+    { label: 'cos', snippet: 'cos ' },
+    { label: 'tan', snippet: 'tan ' },
+    { label: 'x²', snippet: 'x^{2}' },
+    { label: 'eˣ', snippet: 'e^{x}' },
+    { label: '( )', snippet: '(  )', offset: 2 },
+    { label: '[ ]', snippet: '[  ]', offset: 2 },
+    { label: '{ }', snippet: '\\{  \\}', offset: 3 },
+    { label: 'Frac', snippet: '\\frac{ }{ }', offset: 6 },
+    { label: 'd/dx', snippet: '\\frac{d}{dx} ' },
+    { label: '\\( \\)', snippet: '\\(  \\)', offset: 3 },
+    { label: '$$ $$', snippet: '$$\n\n$$', offset: 3 },
+  ]
 
   const persist = useCallback(async () => {
     if (!isMounted.current) return
@@ -93,7 +138,26 @@ export function DailyEditor({ date, initialPage }: Props) {
         onChange={(e) => setTitle(e.target.value)}
         className="w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-lg placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] mb-4"
       />
+
+      <div className="mb-2 flex flex-wrap gap-1 p-2 rounded-md border border-[var(--border)] bg-[var(--card)]/50">
+        {MATH_SYMBOLS.map((sym, i) => (
+          <button
+            key={i}
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault() // Prevents textarea from losing focus before insert
+              insertSnippet(sym.snippet, sym.offset)
+            }}
+            className="px-2 py-1 text-xs font-mono rounded hover:bg-[var(--border)] text-[var(--muted)] hover:text-[var(--text)] transition-colors focus:outline-none"
+            title={sym.label}
+          >
+            {sym.label}
+          </button>
+        ))}
+      </div>
+
       <textarea
+        ref={textareaRef}
         placeholder="Write your notes here…"
         value={content}
         onChange={(e) => setContent(e.target.value)}

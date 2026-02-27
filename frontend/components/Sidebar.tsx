@@ -8,7 +8,7 @@ const nav = [
   { href: '/quiz/daily', label: "Today's Quiz" },
   { href: '/quiz/weekly', label: 'Weekly Test' },
   { href: '/tests', label: 'Test History' },
-  { href: '/knowledge', label: 'Knowledge' },
+  { href: '/facts', label: 'Facts Notes' },
 ]
 
 export function Sidebar() {
@@ -25,11 +25,10 @@ export function Sidebar() {
           <Link
             key={href}
             href={href}
-            className={`px-3 py-2 rounded-md text-sm ${
-              pathname === href || (href !== '/' && pathname.startsWith(href))
-                ? 'bg-[var(--accent)]/15 text-[var(--accent)] font-medium'
-                : 'text-[var(--muted)] hover:bg-[var(--border)]/50 hover:text-[var(--text)]'
-            }`}
+            className={`px-3 py-2 rounded-md text-sm ${pathname === href || (href !== '/' && pathname.startsWith(href))
+              ? 'bg-[var(--accent)]/15 text-[var(--accent)] font-medium'
+              : 'text-[var(--muted)] hover:bg-[var(--border)]/50 hover:text-[var(--text)]'
+              }`}
           >
             {label}
           </Link>

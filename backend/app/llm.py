@@ -10,16 +10,45 @@ def _normalize(s: str) -> str:
     return " ".join(s.lower().split()) if s else ""
 
 
+def _strip_latex_math(s: str) -> str:
+    """Best-effort reduction of simple LaTeX math to plain text for validation.
+
+    This keeps validation tied to the raw note text (no HTML/rendering), but
+    avoids dropping answers just because Ollama wrapped expressions in LaTeX.
+    """
+    if not s:
+        return s
+    import re
+
+    # Remove inline math delimiters \( \) and $ $
+    s = re.sub(r"\\\(|\\\)", "", s)
+    s = re.sub(r"\$(.+?)\$", r"\1", s)
+
+    # Convert very common patterns like \frac{1}{x} -> 1/x
+    def _frac_repl(m: re.Match) -> str:  # type: ignore[name-defined]
+        return f"{m.group(1)}/{m.group(2)}"
+
+    s = re.sub(r"\\frac\{([^{}]+)\}\{([^{}]+)\}", _frac_repl, s)
+    return s
+
+
 def _answer_derived_from_content(correct_answer: str, content: str) -> bool:
     """Check that correct_answer is derived from user content (substring or significant overlap)."""
     if not correct_answer or not content:
         return False
-    ca = _normalize(correct_answer)
-    ct = _normalize(content)
+    # Work on raw text (notes) but normalize away simple LaTeX wrappers so that
+    # \(x^2\) still validates against "x^2" in the notes.
+    ca = _normalize(_strip_latex_math(correct_answer))
+    ct = _normalize(_strip_latex_math(content))
     if len(ca) < 3:
-        return False
+        return True
     # Direct substring
     if ca in ct:
+        return True
+    import re
+    ca_clean = re.sub(r'[^a-z0-9]', '', ca)
+    ct_clean = re.sub(r'[^a-z0-9]', '', ct)
+    if len(ca_clean) > 0 and ca_clean in ct_clean:
         return True
     # Significant token overlap: at least 50% of words in correct_answer appear in content
     ca_words = set(w for w in ca.split() if len(w) > 2)
@@ -38,6 +67,8 @@ RULES:
 - "question" is the question text.
 - "distractors" must be exactly 3 plausible wrong answers (array of 3 strings).
 - "explanation" is a short explanation (optional but recommended).
+- ALL mathematical formulas, variables, and expressions MUST be wrapped in LaTeX inline delimiters \( and \) (e.g., \(x^2\), \(\frac{{1}}{{x}}\)).
+- Use the SAME LANGUAGE as the user's study notes. If the notes are in Spanish, write questions, answers, and explanations in Spanish. Do NOT translate the content to another language.
 
 Return ONLY valid JSON, no markdown, no extra text. Schema:
 {{"facts": [{{"question": "...", "correct_answer": "...", "distractors": ["...", "...", "..."], "explanation": "..."}}]}}
@@ -109,21 +140,52 @@ def generate_quiz_facts(content: str, model: str = DEFAULT_MODEL) -> list[dict]:
     if not facts:
         return []
 
-    validated = []
+    validated: list[dict] = []
+    print(f"[Quiz Gen] Generated {len(facts)} raw facts from Ollama.")
     for f in facts:
         correct = (f.get("correct_answer") or "").strip()
         if not correct:
+            print(f"[Quiz Gen] Dropped due to no correct_answer: {f.get('question')}")
             continue
         if not _answer_derived_from_content(correct, content):
+            print(f"[Quiz Gen] Dropped due to validation (not derived from content): CA='{correct}'")
             continue
         question = (f.get("question") or "").strip()
         distractors = f.get("distractors")
         if not question or not isinstance(distractors, list) or len(distractors) != 3:
+            print(f"[Quiz Gen] Dropped due to invalid structure: {question}")
             continue
-        validated.append({
-            "question": question,
-            "correct_answer": correct,
-            "distractors": [str(d).strip() for d in distractors[:3]],
-            "explanation": (f.get("explanation") or "").strip() or None,
-        })
+        validated.append(
+            {
+                "question": question,
+                "correct_answer": correct,
+                "distractors": [str(d).strip() for d in distractors[:3]],
+                "explanation": (f.get("explanation") or "").strip() or None,
+            }
+        )
+
+    if not validated:
+        # Fallback: if validation dropped everything but we did receive structured
+        # facts from the model, keep them so the user still gets questions.
+        print("[Quiz Gen] Validation dropped all facts, falling back to storing all raw facts.")
+        fallback: list[dict] = []
+        for f in facts:
+            question = (f.get("question") or "").strip()
+            distractors = f.get("distractors") or []
+            if not question:
+                continue
+            if not isinstance(distractors, list) or len(distractors) < 3:
+                continue
+            fallback.append(
+                {
+                    "question": question,
+                    "correct_answer": (f.get("correct_answer") or "").strip(),
+                    "distractors": [str(d).strip() for d in distractors[:3]],
+                    "explanation": (f.get("explanation") or "").strip() or None,
+                }
+            )
+        print(f"[Quiz Gen] Stored {len(fallback)} fallback facts (unvalidated).")
+        return fallback
+
+    print(f"[Quiz Gen] Stored {len(validated)} validated facts.")
     return validated

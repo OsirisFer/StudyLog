@@ -1,4 +1,5 @@
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API = API_BASE
 
 const NO_STORE: RequestInit = { cache: 'no-store' }
 
@@ -184,7 +185,7 @@ export async function getKnowledge(params: KnowledgeQuery = {}): Promise<Knowled
   if (params.limit != null) search.set('limit', String(params.limit))
   if (params.offset != null) search.set('offset', String(params.offset))
   const qs = search.toString()
-  const r = await fetch(`${API}/knowledge${qs ? `?${qs}` : ''}`, NO_STORE)
+  const r = await fetch(`${API}/facts${qs ? `?${qs}` : ''}`, NO_STORE)
   if (!r.ok) throw new Error('Failed to fetch knowledge')
   return r.json()
 }
